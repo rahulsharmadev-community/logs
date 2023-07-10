@@ -1,4 +1,4 @@
-import 'levels.dart';
+import 'level.dart';
 
 /// A log entry representation used to propagate information from [Logger] to
 /// individual handlers.
@@ -21,8 +21,15 @@ class LogRecord {
   /// Associated error (if any) when recording errors messages.
   final Object? error;
 
-  LogRecord(this.level, this.message, this.loggerName, [this.error])
-      : time = DateTime.now(),
+  final StackTrace? stackTrace;
+
+  LogRecord(
+    this.level,
+    this.message,
+    this.loggerName, [
+    this.error,
+    this.stackTrace,
+  ])  : time = DateTime.now(),
         sequenceNumber = LogRecord._nextNumber++;
 
   @override

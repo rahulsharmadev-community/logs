@@ -1,26 +1,21 @@
 import 'dart:async';
-
 import 'package:logs/logs.dart';
+import 'package:logs/src/logs_printer.dart';
 
 void main(List<String> args) async {
-  Logs.listen;
-  Logs.listen;
-  await Future.wait(
-      [test('Branch A', 700), test('Branch B', 200), test('Branch C', 600)]);
-  Logs.dispose;
+  await test('Branch A', 100);
 }
 
-const text =
-    'Level Fine:Level FineLevel FineLevel FineLevel FineLevel FineLevel FineLevel FineLevel Fine Level FineLevel FineLevel FineLevel FineLevel FineLevel FineLevel FineLevel FineLevel FineLevel Fine';
+const text = ["2a97215100f5f8365d8b", "1348ee9c-3144-418f-96eb-1745ad1e5bff"];
 Future<void> test(String name, int s) async {
-  var logs = Logs(name);
-  logs.fine('$text: $name');
+  var logs = Logs(name, printer: LogsPrinter());
+  logs.fine(text);
   await delay(s);
-  logs.config('$text:Config: $name');
+  logs.config(text);
   await delay(s);
-  logs.info('$text:Info: $name');
+  logs.info(name);
   await delay(s);
-  logs.warning('$text:Warning: $name');
+  logs.warning(name);
   await delay(s);
   logs.severeError('$text:Severe Error: $name');
   await delay(s);

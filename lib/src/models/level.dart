@@ -1,6 +1,6 @@
 // ignore_for_file: constant_identifier_names
 
-import 'package:logs/src/ansi_color.dart';
+import 'ansi_color.dart';
 
 enum Level {
   ALL(0),
@@ -45,10 +45,10 @@ enum Level {
       : _fgColor = fgColor,
         _bgColor = bgColor;
 
-  AnsiColor? get fgColor =>
-      _fgColor != null ? AnsiColor.fg(_fgColor!.value) : null;
-  AnsiColor? get bgColor =>
-      _bgColor != null ? AnsiColor.bg(_bgColor!.value) : null;
+  AnsiColor get fgColor =>
+      AnsiColor.fg(_fgColor?.value ?? AnsiColors.White.value);
+  AnsiColor get bgColor =>
+      AnsiColor.bg(_bgColor?.value ?? AnsiColors.White.value);
 
   bool operator <(Level other) => value < other.value;
 
