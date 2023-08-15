@@ -5,7 +5,7 @@ import 'level.dart';
 class LogRecord {
   final Level level;
 
-  final Object? message;
+  final dynamic message;
 
   /// Logger where this record is stored.
   final String loggerName;
@@ -18,8 +18,7 @@ class LogRecord {
 
   static int _nextNumber = 0;
 
-  /// Associated error (if any) when recording errors messages.
-  final Object? error;
+  final dynamic label;
 
   final StackTrace? stackTrace;
 
@@ -27,7 +26,7 @@ class LogRecord {
     this.level,
     this.message,
     this.loggerName, [
-    this.error,
+    this.label,
     this.stackTrace,
   ])  : time = DateTime.now(),
         sequenceNumber = LogRecord._nextNumber++;

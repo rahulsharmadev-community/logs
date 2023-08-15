@@ -7,12 +7,17 @@ class Logs {
   final String recordName;
   final Level observe;
   final LogOutput output;
-  final LogsPrinter printer;
+  final LogsPrinter defaultPrinter;
   Logs(this.recordName,
       {this.observe = Level.ALL,
       this.output = const LogOutput(),
       LogsPrinter? printer})
-      : printer = printer ?? LogsPrinter();
+      : defaultPrinter = printer ??
+            LogsPrinter(
+              recordName: recordName,
+              time: true,
+              trace: true,
+            );
 
   static bool _releaseModeEnable = false;
 
@@ -24,10 +29,10 @@ class Logs {
   /// Now: [Debug, Profile, Release]\
   /// Default:[Debug, Profile]
   static void get releaseModeEnable => _releaseModeEnable = true;
-  void _push(LogRecord record) {
+  void _push(LogRecord record, [LogsPrinter? logsPrinter]) {
     if (_releaseModeEnable || !_isReleaseMode) {
       if (output.console) {
-        printer.printf(record);
+        (logsPrinter ?? defaultPrinter).printf(record);
       }
       if (output.output != null) {
         output.output!.output(record);
@@ -35,31 +40,30 @@ class Logs {
     }
   }
 
-  void fine(Object? message, [Object? error]) =>
-      _push(LogRecord(Level.FINE, message, recordName, error));
+  void fine(dynamic message, [dynamic label]) => _push(
+      LogRecord(Level.FINE, message, recordName, label),
+      LogsPrinter(recordName: recordName, time: false, trace: false));
 
-  void config(Object? message, [Object? error]) =>
-      _push(LogRecord(Level.CONFIG, message, recordName, error));
+  void config(dynamic message, [dynamic label]) => _push(
+      LogRecord(Level.CONFIG, message, recordName, label, StackTrace.current));
 
-  void verbose(Object? message, [Object? error]) =>
-      _push(LogRecord(Level.VERBOSE, message, recordName, error));
+  void verbose(dynamic message, [dynamic label]) => _push(
+      LogRecord(Level.VERBOSE, message, recordName, label),
+      LogsPrinter(recordName: recordName, time: true, trace: false));
 
-  void info(Object? message, [Object? error]) =>
-      _push(LogRecord(Level.INFO, message, recordName, error));
+  void info(dynamic message, [dynamic label]) => _push(
+      LogRecord(Level.INFO, message, recordName, label),
+      LogsPrinter(recordName: recordName, time: true, trace: false));
 
-  void warning(Object? message, [Object? error]) => _push(
-      LogRecord(Level.WARNING, message, recordName, error, StackTrace.current));
+  void warning(dynamic message, [dynamic label]) => _push(
+      LogRecord(Level.WARNING, message, recordName, label, StackTrace.current));
 
-  void severeError(Object? message, [Object? error]) => _push(LogRecord(
-      Level.SEVERE_ERROR, message, recordName, error, StackTrace.current));
+  void severeError(dynamic message, [dynamic label]) => _push(LogRecord(
+      Level.SEVERE_ERROR, message, recordName, label, StackTrace.current));
 
-  void error(
-    Object? message, [
-    Object? error,
-  ]) =>
-      _push(LogRecord(
-          Level.ERROR, message, recordName, error, StackTrace.current));
+  void error(dynamic message, [dynamic label]) => _push(
+      LogRecord(Level.ERROR, message, recordName, label, StackTrace.current));
 
-  void shout(Object? message, [Object? error]) =>
-      _push(LogRecord(Level.SHOUT, message, recordName, error));
+  void shout(dynamic message, [dynamic label]) => _push(
+      LogRecord(Level.SHOUT, message, recordName, label, StackTrace.current));
 }

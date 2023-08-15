@@ -1,27 +1,31 @@
 // ignore_for_file: prefer_interpolation_to_compose_strings
 
 import 'dart:convert';
+import 'dart:mirrors';
 
 import 'package:logs/src/models/ansi_color.dart';
 import 'package:logs/src/models/log_record.dart';
+import 'package:stack_trace/stack_trace.dart';
 
 import 'models/level.dart';
 
 const _topLeftCorner = '┌';
 const _bottomLeftCorner = '└';
 const _middleCorner = '├';
-const _middleTopLine = '┰';
-const _middleBottomLine = '┴';
 const _verticalLine = '│';
 const _doubleDivider = '─';
 const _singleDivider = '┄';
 
 class LogsPrinter {
+  final String recordName;
   final int maxLength;
-  final bool printTime;
+  final bool time;
+  final bool trace;
   LogsPrinter({
+    required this.recordName,
+    required this.time,
+    required this.trace,
     this.maxLength = 100,
-    this.printTime = true,
   }) {
     for (var i = 0; i < maxLength - 1; i++) {
       doubleDividerLine += _doubleDivider;
@@ -31,51 +35,61 @@ class LogsPrinter {
   var doubleDividerLine = '';
   var singleDividerLine = '';
 
-  List<String> _formatAndDecorate(
-    Level level,
-    String message,
-    String? time,
-    String? error,
-    String? stackTrace,
-  ) {
+  List<String> _formatAndDecorate({
+    required Level level,
+    required String message,
+    required String? time,
+    required String? label,
+    required StackTrace? stackTrace,
+  }) {
     List<String> buffer = [];
     var color = level.fgColor.call;
     buffer.add(color('$_topLeftCorner$doubleDividerLine'));
-    if (error != null) {
-      for (var line in error.split('\n')) {
+    if (label != null) {
+      for (var line in label.split('\n')) {
         buffer.add(color('$_verticalLine$line'));
       }
     }
     for (var line in message.split('\n')) {
       buffer.add(color('$_verticalLine$line'));
     }
-    buffer.addAll(
-        _bottomMsg(color: color, time: time, msg: stackTrace ?? level.name));
+    var topLine = _middleCorner + doubleDividerLine;
+    var bottomLine = _bottomLeftCorner + doubleDividerLine;
+
+    if (this.time || trace) {
+      buffer.add(color(topLine));
+      buffer.add(_bottomMsg(color: color, time: time, stackTrace: stackTrace));
+    }
+    buffer.add(color(bottomLine));
     return buffer;
   }
 
-  _bottomMsg(
-      {required String msg,
+  String _bottomMsg(
+      {StackTrace? stackTrace,
       required String Function(String) color,
       String? time}) {
-    var topLine = _middleCorner +
-        (time == null
-            ? doubleDividerLine
-            : doubleDividerLine.replaceRange(69, 70, _middleTopLine));
-    var bottomLine = _bottomLeftCorner +
-        (time == null
-            ? doubleDividerLine
-            : doubleDividerLine.replaceRange(69, 70, _middleBottomLine));
-    return [
-      color(topLine),
-      (time == null)
-          ? color('$_verticalLine $msg')
-          : color('$_verticalLine '
-                  '${msg.replaceAll('\n', '\n$_verticalLine ').padRight(68, ' ')}'
-                  '$_verticalLine ') +
-              AnsiColor.fg(AnsiColors.GRAY.value).call(time),
-      color(bottomLine)
-    ];
+    var trace = [];
+
+    if (this.trace && stackTrace != null) {
+      var frames = Trace.from(stackTrace).frames;
+      for (var frame in frames) {
+        if (frame.package != 'logs') {
+          trace.add(
+              '$_verticalLine Method: ${frame.member}, File: ${frame.location},');
+        }
+      }
+    }
+
+    var timeString = time != null && this.time
+        ? color('$_verticalLine Time: ') +
+            AnsiColor.fg(AnsiColors.GRAY.value).call(time)
+        : '';
+
+    var traceString = (this.trace && trace.isNotEmpty)
+        ? color(trace.join('\n') + '\n$_middleCorner$doubleDividerLine\n')
+        : '';
+
+    return traceString + timeString;
   }
 
   void printf(LogRecord record) => _prettyText(record).forEach(print);
@@ -83,35 +97,37 @@ class LogsPrinter {
   List<String> _prettyText(LogRecord record) {
     var messageStr = _stringifyMessage(record.message);
 
-    var errorStr = record.error?.toString();
+    var label = record.label?.toString();
 
     String? timeStr;
-    if (printTime) {
+    if (time) {
       timeStr = _getTime(record.time);
     }
-    var stackTrace = record.stackTrace?.toString().split('\n');
-    if (stackTrace != null) {
-      stackTrace.removeAt(0);
-      for (int i = 0; i < stackTrace.length; i++) {
-        if (i / 2 != 0) stackTrace.removeAt(i);
-        if (stackTrace[i].isNotEmpty) {
-          stackTrace[i] = stackTrace[i].replaceAll(RegExp(r'\s+'), ' ');
-        }
-      }
-    }
     return _formatAndDecorate(
-        record.level, messageStr, timeStr, errorStr, stackTrace?.join('\n'));
+        level: record.level,
+        message: messageStr,
+        time: timeStr,
+        label: label,
+        stackTrace: record.stackTrace);
   }
 
   String _stringifyMessage(dynamic message) {
     var finalMessage = message is Function ? message() : message;
-    if (finalMessage is Map ||
-        finalMessage is Iterable ||
-        finalMessage is List) {
+
+    if ('$finalMessage'.startsWith('Instance of')) {
+      finalMessage = printVariables(message);
+    }
+    if (finalMessage is Map<String, dynamic> ||
+        finalMessage is List<Map<String, dynamic>>) {
       var encoder = JsonEncoder.withIndent('  ');
       return encoder.convert(finalMessage);
     } else {
       var buffer = StringBuffer();
+      finalMessage = (finalMessage is List ||
+              finalMessage is Iterable ||
+              finalMessage is Set)
+          ? finalMessage.join(',\n')
+          : finalMessage.toString();
       for (int i = 0, count = 0; i < finalMessage.length; i++) {
         if (count >= maxLength && finalMessage[i] == ' ') {
           i++;
@@ -125,6 +141,22 @@ class LogsPrinter {
       buffer.clear();
       return '$finalMessage';
     }
+  }
+
+  Map<String, dynamic> printVariables(dynamic obj) {
+    InstanceMirror mirror = reflect(obj);
+    ClassMirror classMirror = mirror.type;
+    Map<String, dynamic> map = {};
+
+    for (var key in classMirror.declarations.keys) {
+      var declaration = classMirror.declarations[key];
+      if (declaration is VariableMirror && !declaration.isStatic) {
+        var variableName = MirrorSystem.getName(key);
+        var variableValue = mirror.getField(key).reflectee;
+        map.addAll({variableName: variableValue});
+      }
+    }
+    return map;
   }
 
   String _getTime(DateTime t) {
