@@ -11,7 +11,7 @@ class LogRecord {
   final String loggerName;
 
   /// Time when this record was created.
-  final DateTime time;
+  final DateTime timestamp;
 
   /// Unique sequence number greater than all log records created before it.
   final int sequenceNumber;
@@ -28,7 +28,7 @@ class LogRecord {
     this.loggerName, [
     this.label,
     this.stackTrace,
-  ])  : time = DateTime.now(),
+  ])  : timestamp = DateTime.now(),
         sequenceNumber = LogRecord._nextNumber++;
 
   @override

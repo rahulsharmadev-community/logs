@@ -38,7 +38,7 @@ class LogsPrinter {
   List<String> _formatAndDecorate({
     required Level level,
     required String message,
-    required String? time,
+    required String? timeStamp,
     required String? label,
     required StackTrace? stackTrace,
   }) {
@@ -56,9 +56,10 @@ class LogsPrinter {
     var topLine = _middleCorner + doubleDividerLine;
     var bottomLine = _bottomLeftCorner + doubleDividerLine;
 
-    if (this.time || trace) {
+    if (time || trace) {
       buffer.add(color(topLine));
-      buffer.add(_bottomMsg(color: color, time: time, stackTrace: stackTrace));
+      buffer.add(
+          _bottomMsg(color: color, time: timeStamp, stackTrace: stackTrace));
     }
     buffer.add(color(bottomLine));
     return buffer;
@@ -95,18 +96,17 @@ class LogsPrinter {
   void printf(LogRecord record) => _prettyText(record).forEach(print);
 
   List<String> _prettyText(LogRecord record) {
-    var messageStr = _stringifyMessage(record.message);
-
+    var messageString = _stringifyMessage(record.message);
     var label = record.label?.toString();
 
-    String? timeStr;
+    String? timeStamp;
     if (time) {
-      timeStr = _getTime(record.time);
+      timeStamp = _getTime(record.timestamp);
     }
     return _formatAndDecorate(
         level: record.level,
-        message: messageStr,
-        time: timeStr,
+        message: messageString,
+        timeStamp: timeStamp,
         label: label,
         stackTrace: record.stackTrace);
   }
