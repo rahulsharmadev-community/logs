@@ -1,8 +1,6 @@
 // ignore_for_file: prefer_interpolation_to_compose_strings
 
 import 'dart:convert';
-import 'dart:mirrors';
-
 import 'package:logs/src/models/ansi_color.dart';
 import 'package:logs/src/models/log_record.dart';
 import 'package:stack_trace/stack_trace.dart';
