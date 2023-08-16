@@ -114,9 +114,6 @@ class LogsPrinter {
   String _stringifyMessage(dynamic message) {
     var finalMessage = message is Function ? message() : message;
 
-    if ('$finalMessage'.startsWith('Instance of')) {
-      finalMessage = printVariables(message);
-    }
     if (finalMessage is Map<String, dynamic> ||
         finalMessage is List<Map<String, dynamic>>) {
       var encoder = JsonEncoder.withIndent('  ');
@@ -141,22 +138,6 @@ class LogsPrinter {
       buffer.clear();
       return '$finalMessage';
     }
-  }
-
-  Map<String, dynamic> printVariables(dynamic obj) {
-    InstanceMirror mirror = reflect(obj);
-    ClassMirror classMirror = mirror.type;
-    Map<String, dynamic> map = {};
-
-    for (var key in classMirror.declarations.keys) {
-      var declaration = classMirror.declarations[key];
-      if (declaration is VariableMirror && !declaration.isStatic) {
-        var variableName = MirrorSystem.getName(key);
-        var variableValue = mirror.getField(key).reflectee;
-        map.addAll({variableName: variableValue});
-      }
-    }
-    return map;
   }
 
   String _getTime(DateTime t) {
